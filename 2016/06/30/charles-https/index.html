@@ -1,13 +1,40 @@
-<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
-(function() {
-  var hm = document.createElement("script");
-  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
-  var s = document.getElementsByTagName("script")[0]; 
-  s.parentNode.insertBefore(hm, s);
-})();
-</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">使用Charles在移动设备上捕获https数据包</h1><span class="post-time">Jun 30, 2016</span><div class="post-content"><p>对于互联网从业人员而言，掌握抓包，是必备技能。<br><a id="more"></a></p>
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">使用Charles在移动设备上捕获https数据包</h1><span class="post-time">Jun 30, 2016</span><div class="post-content"><p>对于互联网从业人员而言，掌握抓包，是必备技能。<br><a id="more"></a></p>
+<p><code>Charles</code>是一个http代理，工作模式如下图：</p>
 <img src="/images/mobile/http_proxy.png" title="抓包">
-<h1 id="如何判定分类的好坏"><a href="#如何判定分类的好坏" class="headerlink" title="如何判定分类的好坏"></a>如何判定分类的好坏</h1></div></article><div class="tags"><a href="/tags/devops/">devops</a><a href="/tags/ios/">ios</a><a href="/tags/charles/">charles</a><a href="/tags/https/">https</a></div><div class="paginator"><a href="/2015/02/28/release-f5-for-template-engineer/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2016/06/30/charles-https/index.html" data-title="使用Charles在移动设备上捕获https数据包" data-url="http://debughacks.github.io/2016/06/30/charles-https/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+<p>但是默认只能抓http协议的数据包，要捕获https的数据包，需要进行相关配置。</p>
+<p>下文以<code>IOS</code>移动设备为例，讲述配置步骤（<code>android</code>设备类似）：</p>
+<ul>
+<li>在移动设备安装ssl证书</li>
+</ul>
+<p>Charles ssl证书的下载地址如下：</p>
+<p><a href="http://www.charlesproxy.com/getssl" target="_blank" rel="external">http://www.charlesproxy.com/getssl</a></p>
+<p>在移动设备的浏览器中打开上述<code>Url</code>，即可进行安装。</p>
+<ul>
+<li>安装http代理<code>Charles</code></li>
+</ul>
+<p>软件下载地址如下：<br><a href="http://www.charlesproxy.com/latest-release/download.do" target="_blank" rel="external">http://www.charlesproxy.com/latest-release/download.do</a></p>
+<ul>
+<li>启用http代理</li>
+</ul>
+<p>打开<code>Charles</code>软件，默认会启动一个监听本地8888端口的http代理， 也可以在<code>Charles</code>的设置中修改相关端口。</p>
+<ul>
+<li>配置<code>Charles</code>支持https</li>
+</ul>
+<p>在<code>Charles</code>中打开：</p>
+<pre><code>Proxy -&gt; SSL Proxying Settings
+</code></pre><p>勾选</p>
+<pre><code>Enable SSL Proxying
+</code></pre><p>然后在下方的<code>Locations</code>中点击</p>
+<pre><code>Add
+</code></pre><p>添加需要抓https接口的域名。</p>
+<p>例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Host:www.baidu.com</div><div class="line">Port:443</div></pre></td></tr></table></figure>
+<ul>
+<li>在移动设备上修改代理</li>
+</ul>
+<img src="/images/mobile/ios_http_proxy.png" title="ios设置代理">
+<p>其中，<code>服务器</code>是安装了<code>Charles</code>软件的电脑的<code>IP</code>，端口是<code>Charles</code> http代理开启的端口。</p>
+</div></article><div class="tags"><a href="/tags/devops/">devops</a><a href="/tags/ios/">ios</a><a href="/tags/charles/">charles</a><a href="/tags/https/">https</a></div><div class="paginator"><a href="/2015/02/28/release-f5-for-template-engineer/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2016/06/30/charles-https/index.html" data-title="使用Charles在移动设备上捕获https数据包" data-url="http://debughacks.github.io/2016/06/30/charles-https/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
 (function() {
     var ds = document.createElement('script');
     ds.type = 'text/javascript';ds.async = true;

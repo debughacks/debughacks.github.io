@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://debughacks.github.io/"/>
-  <updated>2016-06-30T09:26:57.000Z</updated>
+  <updated>2016-06-30T10:07:27.000Z</updated>
   <id>http://debughacks.github.io/</id>
   
   <author>
@@ -20,11 +20,45 @@
     <link href="http://debughacks.github.io/2016/06/30/charles-https/"/>
     <id>http://debughacks.github.io/2016/06/30/charles-https/</id>
     <published>2016-06-30T08:38:16.000Z</published>
-    <updated>2016-06-30T09:26:57.000Z</updated>
+    <updated>2016-06-30T10:07:27.000Z</updated>
     
     <content type="html">&lt;p&gt;对于互联网从业人员而言，掌握抓包，是必备技能。&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;Charles&lt;/code&gt;是一个http代理，工作模式如下图：&lt;/p&gt;
 &lt;img src=&quot;/images/mobile/http_proxy.png&quot; title=&quot;抓包&quot;&gt;
-&lt;h1 id=&quot;如何判定分类的好坏&quot;&gt;&lt;a href=&quot;#如何判定分类的好坏&quot; class=&quot;headerlink&quot; title=&quot;如何判定分类的好坏&quot;&gt;&lt;/a&gt;如何判定分类的好坏&lt;/h1&gt;</content>
+&lt;p&gt;但是默认只能抓http协议的数据包，要捕获https的数据包，需要进行相关配置。&lt;/p&gt;
+&lt;p&gt;下文以&lt;code&gt;IOS&lt;/code&gt;移动设备为例，讲述配置步骤（&lt;code&gt;android&lt;/code&gt;设备类似）：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在移动设备安装ssl证书&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Charles ssl证书的下载地址如下：&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://www.charlesproxy.com/getssl&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://www.charlesproxy.com/getssl&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;在移动设备的浏览器中打开上述&lt;code&gt;Url&lt;/code&gt;，即可进行安装。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;安装http代理&lt;code&gt;Charles&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;软件下载地址如下：&lt;br&gt;&lt;a href=&quot;http://www.charlesproxy.com/latest-release/download.do&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://www.charlesproxy.com/latest-release/download.do&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;启用http代理&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;打开&lt;code&gt;Charles&lt;/code&gt;软件，默认会启动一个监听本地8888端口的http代理， 也可以在&lt;code&gt;Charles&lt;/code&gt;的设置中修改相关端口。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;配置&lt;code&gt;Charles&lt;/code&gt;支持https&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在&lt;code&gt;Charles&lt;/code&gt;中打开：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Proxy -&amp;gt; SSL Proxying Settings
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;勾选&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Enable SSL Proxying
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;然后在下方的&lt;code&gt;Locations&lt;/code&gt;中点击&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Add
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;添加需要抓https接口的域名。&lt;/p&gt;
+&lt;p&gt;例：&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;Host:www.baidu.com&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;Port:443&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;在移动设备上修改代理&lt;/li&gt;
+&lt;/ul&gt;
+&lt;img src=&quot;/images/mobile/ios_http_proxy.png&quot; title=&quot;ios设置代理&quot;&gt;
+&lt;p&gt;其中，&lt;code&gt;服务器&lt;/code&gt;是安装了&lt;code&gt;Charles&lt;/code&gt;软件的电脑的&lt;code&gt;IP&lt;/code&gt;，端口是&lt;code&gt;Charles&lt;/code&gt; http代理开启的端口。&lt;/p&gt;
+</content>
     
     <summary type="html">
     
@@ -1044,9 +1078,9 @@ $ ll -h /usr/local/php5-static/bin/php
       <category term="php" scheme="http://debughacks.github.io/categories/php/"/>
     
     
-      <category term="devops" scheme="http://debughacks.github.io/tags/devops/"/>
-    
       <category term="linux" scheme="http://debughacks.github.io/tags/linux/"/>
+    
+      <category term="devops" scheme="http://debughacks.github.io/tags/devops/"/>
     
       <category term="php" scheme="http://debughacks.github.io/tags/php/"/>
     
