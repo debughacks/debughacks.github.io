@@ -5,7 +5,7 @@
   var s = document.getElementsByTagName("script")[0]; 
   s.parentNode.insertBefore(hm, s);
 })();
-</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">在php5.5中使用pdo和mysql_escape_string的一个坑</h1><span class="post-time">Nov 16, 2013</span><div class="post-content"><p>最近在项目中使用了鸟哥的yar扩展，但是在php5.2.10环境中没有安装成功，所以将php升级到了5.5。<br><a id="more"></a></p>
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">首页</a></li><li class="nav-link"><a href="/archives/" target="_self">归档</a></li><li class="nav-link"><a href="/tags/" target="_self">标签</a></li><li class="nav-link"><a href="/about/" target="_self">关于</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">在php5.5中使用pdo和mysql_escape_string的一个坑</h1><span class="post-time">Nov 16, 2013</span><div class="post-content"><p>最近在项目中使用了鸟哥的yar扩展，但是在php5.2.10环境中没有安装成功，所以将php升级到了5.5。<br><a id="more"></a></p>
 <h3 id="升级步骤"><a href="#升级步骤" class="headerlink" title="升级步骤"></a>升级步骤</h3><ul>
 <li>安装php5.5.0</li>
 <li>检测代码兼容性</li>
@@ -19,7 +19,7 @@
 <p>通过调试，发现：<br>    $keyword在mysql_real_escape_string处理之后，变成了false，所以在进行后面的查询时获取不到相应结果，页面就异常了。</p>
 <p>再进一步调试发现：<br>    getDb使用的是pdo。<br>    $dbh = new PDO(‘mysql:host=xxx;port=xxx;dbname=xxx’, ‘xxx’, ‘xxx’);</p>
 <p>于是原因浮出水面<br>    1 在使用string mysql_real_escape_string时没有指定link_identifier<br>    2 所以会去找使用mysql_connect()打开的最后一个连接<br>    3 使用的是pdo，没有找到相关连接。于是尝试使用不带任何参数的mysql_connect()去建立一个连接来使用<br>    4 本机没有mysql server，自然建立连接失败。于是发生错误，并产生警告信息（E_WARNING）<br>    5 服务器上设置的错误报告等级已经屏蔽了E_WARNING，所以也没有监控到相关错误</p>
-</div></article><div class="tags"><a href="/tags/php5-5/">php5.5</a><a href="/tags/mysql/">mysql</a></div><div class="paginator"><a href="/2013/11/22/android-app-profile-tools/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2013/10/26/fcitx-fedora/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2013/11/16/pdo-mysql-escape-string/index.html" data-title="在php5.5中使用pdo和mysql_escape_string的一个坑" data-url="http://debughacks.github.io/2013/11/16/pdo-mysql-escape-string/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+</div></article><div class="tags"><a href="/tags/php5-5/">php5.5</a><a href="/tags/mysql/">mysql</a></div><div class="paginator"><a href="/2013/11/22/android-app-profile-tools/" class="prev"><i class="fa fa-chevron-left"></i><span> 上一页</span></a><a href="/2013/10/26/fcitx-fedora/" class="next"><span>下一页</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2013/11/16/pdo-mysql-escape-string/index.html" data-title="在php5.5中使用pdo和mysql_escape_string的一个坑" data-url="http://debughacks.github.io/2013/11/16/pdo-mysql-escape-string/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
 (function() {
     var ds = document.createElement('script');
     ds.type = 'text/javascript';ds.async = true;
