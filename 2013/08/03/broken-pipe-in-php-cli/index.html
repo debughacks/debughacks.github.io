@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">Broken Pipe in Php Cli</h1><span class="post-time">Aug 3, 2013</span><div class="post-content"><p>下周打算把服务器上的php升级到5.5，综合老大的建议，计划按这个步骤进行：</p>
+<hr>
+<ul>
+<li>下线一台服务器，另起目录安装php5.5</li>
+</ul>
+<p>安装过程与php5.3差不多，要开启zend opcache的话，需要在<br>configure时–enable-opcache。在php.ini中配置时，需要以zend_extension的<br>形式加载。<br><a id="more"></a></p>
+<ul>
+<li>从服务器访问日志中统计最近有请求的接口，按请求次数从大大小排序<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">cat access_<span class="built_in">log</span> | awk <span class="string">'&#123;print $7&#125;'</span> | awk -F <span class="string">"?"</span> <span class="string">'&#123;print $1&#125;'</span> | sort | uniq -c | sort -nr</div></pre></td></tr></table></figure></li>
+<li><p>通过已统计的接口列表（通过第二步产生），从访问日志中查询相关请求地<br> 址（包括相关参数）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">access_<span class="built_in">log</span> | grep  <span class="string">'/api/test'</span> | head -n 1</div></pre></td></tr></table></figure>
+</li>
+<li><p>绑定hosts，根据请求地址列表进行访问，观察web server和php的相关日志</p>
+</li>
+</ul>
+<hr>
+<p>进行到第三步，就卡住了。：（</p>
+<p>“cat access_log | grep  ‘/api/test’ | head -n 1”这条命令在shell下执行<br>没有问题，但是如果用php的shell_exec运行，就会出现 “grep: writing<br>output: Broken pipe”。</p>
+<p>一顿google之后，遇到这篇文章Python中的SIGPIPE信号。对作者的示例代码做<br>了下加工后，发现一切正常了，修改后的python代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> subprocess</div><div class="line"><span class="keyword">import</span> signal</div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">reset_sigpipe</span><span class="params">()</span>:</span></div><div class="line">    signal.signal(signal.SIGPIPE, signal.SIG_DFL)</div><div class="line"></div><div class="line">output = subprocess.Popen(<span class="string">"cat access_log | grep  '/api/test' | head -n 1"</span>, shell=<span class="keyword">True</span>, preexec_fn=reset_sigpipe, stdout=subprocess.PIPE)</div><div class="line"><span class="keyword">print</span> output.stdout.read()</div></pre></td></tr></table></figure></p>
+<p>但是我是要用php来做这件事，下面是php相关代码<br><figure class="highlight php"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="meta">&lt;?php</span></div><div class="line">$source = <span class="string">'./source_url.txt'</span>;</div><div class="line">$dest = <span class="string">'./dest_url.txt'</span>;</div><div class="line">$res = file($source);</div><div class="line">pcntl_signal(SIGPIPE, SIG_DFL);</div><div class="line">file_put_contents($dest, <span class="string">''</span>);</div><div class="line"><span class="keyword">foreach</span> ($res <span class="keyword">as</span> $row) &#123;</div><div class="line">    $row = trim($row);</div><div class="line">    <span class="keyword">if</span> (strpos($row, <span class="string">'http://'</span>) !== <span class="keyword">false</span>) &#123;</div><div class="line">        <span class="keyword">continue</span>;</div><div class="line">    &#125;</div><div class="line">    $command = <span class="string">"cat access_log | grep  '&#123;$row&#125;' | head -n 1 | awk '&#123;print \$6\" \"\$7&#125;' | awk -F '\"' '&#123;print $2&#125;' | awk '&#123;print $1\" http://test.api.com\"$2&#125;'"</span>;</div><div class="line">    $check = system($command);</div><div class="line">    file_put_contents($dest, $check . PHP_EOL, FILE_APPEND);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>和python中的signal.signal(signal.SIGPIPE, signal.SIG_DFL)一样，关键是<br>这句:<br>    pcntl_signal(SIGPIPE, SIG_DFL)<br>当php进程接收到SIGPIPE信号时，重置<br>为系统默认处理方式，即接收子进程的返回值。</p>
+<p><strong>问题解决了，但是原因呢？</strong></p>
+<p>我们再看看这行命令<br>    cat access_log | grep  ‘/api/test’ | head -n 1</p>
+<p>head命令在取得一行后立即退出（exit），此时pipe的读端就没了，但grep还会<br>继续往pipe写，此时pipe就会发送SIGPIPE信号，默认动作是终止程序。在shell<br>下执行时，grep收到SIGPIPE信号就退出了，所以运行没有问题。</p>
+<p>但在通过php的shell_exec或者system运行为何就有问题。应该是php忽略了<br>SIGPIPE信号，所以grep会继续向broke pipe（读端关闭）写入，于是就出现了<br>    grep: writing output: Broken pipe</p>
+<p>在天朝，有图也不一定是真相。所以应该是，也不一定是。废话少说，我们直接<br>上代码：<br>    $grep -r ‘SIGPIPE’ ./<br>    ./sapi/cli/php_cli.c:   signal(SIGPIPE, SIG_IGN); /* ignore SIGPIPE in standalone mode so<br>所以php以cli的形式运行时，会忽略SIGPIPE信号。</p>
+<p>reference：</p>
+<blockquote>
+<p><a href="https://blogs.oracle.com/opal/entry/using_php_5_5_s" target="_blank" rel="external">https://blogs.oracle.com/opal/entry/using_php_5_5_s</a></p>
+</blockquote>
+</div></article><div class="tags"><a href="/tags/php5-5/">php5.5</a><a href="/tags/pcntl/">pcntl</a><a href="/tags/broken-pipe/">broken pipe</a></div><div class="paginator"><a href="/2013/08/04/guide-of-packet-mobile-capture/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2013/08/03/check-php5-dot-5-compatibility/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2013/08/03/broken-pipe-in-php-cli/index.html" data-title="Broken Pipe in Php Cli" data-url="http://debughacks.github.io/2013/08/03/broken-pipe-in-php-cli/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>

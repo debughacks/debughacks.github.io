@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">初探Android应用性能分析</h1><span class="post-time">Nov 22, 2013</span><div class="post-content"><p>如果一个android应用打开时比较慢，或者使用起来比较卡。这个可能是客户端代码有待优化，也可能是服务端性能比较挫。对一个客户端开发者而言，在客户端代码中增加相关debug日志，即可比较准确地定位问题。但这活要落到一个服务端开发人员手里，要怎么办？</p>
+<p>本文将在没有apk源码的情况下，以服务端开发人员的视角进行客户端app性能的分析。<br><a id="more"></a><br>在分析之前，我们先补充点android基础知识。</p>
+<h3 id="android基础知识"><a href="#android基础知识" class="headerlink" title="android基础知识"></a>android基础知识</h3><p>我们所说的android应用，一般都是通过将一个以apk结尾的文件安装在手机等移动设备上才能运行起来的。所以我们先从apk说起。</p>
+<h5 id="什么是apk"><a href="#什么是apk" class="headerlink" title="什么是apk"></a>什么是apk</h5><p>我们先从网上下载一个apk<br>    $ wget <a href="http://shouji.360tpcdn.com/131106/0124832c4cf8c35a762cfece3bac52b1/com.sina.weibo_650.apk" target="_blank" rel="external">http://shouji.360tpcdn.com/131106/0124832c4cf8c35a762cfece3bac52b1/com.sina.weibo_650.apk</a></p>
+<p>然后查看这个文件的类型<br>    $ file com.sina.weibo_650.apk<br>    com.sina.weibo_650.apk: Zip archive data, at least v2.0 to extract</p>
+<p>会发现<code>com.sina.weibo_650.apk</code>是一个zip压缩文件。解压缩后的文件，主要包括<em>一些资源文件</em>，<em>一些配置文件</em>，<em>一些类库</em>，还有<em>一个class.dex</em>。目录结构如下<br>    AndroidManifest.xml<br>    assets<br>    classes.dex<br>    lib<br>    META-INF<br>    org<br>    res<br>    resources.arsc</p>
+<p>粗略一看，发现 <code>class.dex</code> 这个文件有5.9M，这应该就是主角。继续执行如下命令<br>    $ file classes.dex<br>    classes.dex: Dalvik dex file version 035</p>
+<p>因为没有开发过android应用，不明白用java开发的app和这个Dalvik dex file之间有什么关系？所以我们先跳出apk的视角。</p>
+<h5 id="android平台架构"><a href="#android平台架构" class="headerlink" title="android平台架构"></a>android平台架构</h5><img src="/images/mobile/android_architecture.png" title="android architecture images">
+<p>如上图，android基于linux操作系统，使用linux内核与设备的硬件进行交互。在内核之上，又抽象出了一层，包括Dalvik虚拟机等。</p>
+<p>因为<code>dex</code>是<code>Dalvik VM</code> Executes的全称，即android <code>Dalvik</code>虚拟机执行程序。</p>
+<p>那一个apk的生产和执行过程将是：<br><code>*.java -&gt; *.class -&gt; classes.dex（classes.dex将由Dalvik VM转换成机器码，由linux内核交给cpu去执行）</code></p>
+<p>这样的话，在linux系统上使用profile软件的经验，也将派上用场。</p>
+<p>android相关基础知识先介绍到此，感兴趣的请进一步查阅本文后面的参看资料。</p>
+<h3 id="android应用性能分析"><a href="#android应用性能分析" class="headerlink" title="android应用性能分析"></a>android应用性能分析</h3><h5 id="apk启动速度"><a href="#apk启动速度" class="headerlink" title="apk启动速度"></a>apk启动速度</h5><p>在分析之前，我们先看看android程序的执行流程<br><img src="/images/mobile/android_application_execute_flow.png" title="android application execute flow images"></p>
+<p>如上图，只要获取到启动ActivityManager所需要的时间，即是apk的启动时间。</p>
+<pre><code>adb logcat | grep ActivityManager
+</code></pre><p>其中”Displayed”对应的时间，即是launch Activity对应的时间，也就是apk启动时间，也可以使用如下命令：</p>
+<pre><code>adb logcat -c &amp;&amp; adb logcat -s ActivityManager | grep  &quot;Displayed&quot;
+</code></pre><ul>
+<li>要使用 <code>adb</code>，需要先用usb线连接电脑和手机，并在手机的<code>设置</code>-&gt;<code>开发者选项</code>中开启<code>USB调试</code></li>
+<li><code>adb</code>这个工具，可以通过在android sdk的platform-tools目录中找到。后面介绍的<code>systrace</code>也在这个目录。</li>
+</ul>
+<h5 id="页面渲染性能"><a href="#页面渲染性能" class="headerlink" title="页面渲染性能"></a>页面渲染性能</h5><p>android应用中的页面，是由android系统一帧，一帧地绘制的，其中每一帧的处理如下图：<br><img src="/images/mobile/android_view_execute_flow.png" title="android view execute flow images"></p>
+<p>即：<br><code>计算视图大小（measure） -&gt; 安置视图的位置（layout） -&gt; 绘制（draw）视图</code></p>
+<p>通过收集每帧的处理时间，即可以了解页面的渲染性能。</p>
+<blockquote>
+<p>当fps（每秒处理帧数，页面刷新率）为60时，页面的渲染看起来会比较平滑，这就需要每帧的处理时间不能大于16ms（1000/60）</p>
+</blockquote>
+<p>要检测一个应用在渲染页面时的每帧处理时间，通过如下命令，即可获得每帧的处理时间<br>    adb shell dumpsys gfxinfo com.sina.weibo</p>
+<p>在输出日志的<code>Profile</code>数据段，包含了三列<code>Draw</code>，<code>Process</code>，<code>Execute</code>分别对应的处理时间，单位是ms。这三列的总和，就是渲染每帧时的处理时间。如<br>    Draw    Process    Execute<br>    0.95    0.93    0.72<br>    0.84    1.16    0.56<br>    0.83    0.89    0.69<br>    1.32    2.15    1.14<br>    1.29    1.37    1.01</p>
+<blockquote>
+<p>在进行分析之前，需要在<code>设置</code>-&gt;<code>开发者选项</code>中点击<code>GPU呈现模式分析</code>，选择<code>在adb shell dumpsys gfxinfo中</code>。</p>
+</blockquote>
+<p>收集步骤：<br>    1.重新启动app<br>    2.在界面完全加载完之后，在界面上慢慢上下滑动几个像素<br>    3.在终端执行adb shell dumpsys gfxinfo com.sina.weibo<br>这时将在终端输出页面渲染时的最后128帧中每帧所花费的时间，将相关数据贴到excel表格中，点击其中的<code>insert</code>-&gt;<code>chart</code>，即可生成相关图表<br><img src="/images/mobile/frame_render_time.png" title="frame render time images"></p>
+<blockquote>
+<p>其中<code>com.sina.weibo</code>就是app的包名</p>
+</blockquote>
+<p>获取包名的方法:<br>    adb shell pm list packages</p>
+<h5 id="使用systrace进一步分析"><a href="#使用systrace进一步分析" class="headerlink" title="使用systrace进一步分析"></a>使用systrace进一步分析</h5><p>通过收集该apk的启动速度和每帧的渲染时间，并与竟品进行对比发现。该app启动时间的确比较慢，也偶尔有丢帧的现象发生。如何近一步分析呢？这时就需要<code>systrace</code>了。</p>
+<p>示例使用方法如下：<br>    cd android-sdk-linux/platform-tools/systrace<br>    python systrace.py –app=com.qihoo.appstore gfx view</p>
+<p>上面这条命令将会在<code>android-sdk-linux/platform-tools/systrace</code>目录下生成<code>trace.html</code>。其中收集了包名为<code>com.qihoo.appstore</code>的应用在android系统上针对<code>gfx</code>和<code>view</code> category的执行数据。</p>
+<p><code>trace.html</code>在浏览器中打开如下图：<br><img src="/images/mobile/android_systrace_output.png" title="android systrace output images"></p>
+<p>可以使用如下方法，对<code>trace.html</code>进行进一步分析：</p>
+<ul>
+<li>通过鼠标点击左侧的<code>+</code>，<code>-</code>可以展开或者收缩相关显示数据</li>
+<li>通过键盘上的<code>a</code>，<code>d</code>可以使显示的内容沿着顶部的时间轴向左或者向右移动</li>
+<li>通过键盘上的<code>w</code>，<code>s</code>可以对显示的内容进行放大或者缩小</li>
+<li>使用鼠标点击内容页面的某一个块，在下方会显示详情</li>
+<li>使用鼠标选择一块内容页面，在下方会显示汇总信息</li>
+</ul>
+<p>将光标定位到最后一行，使用<code>w</code>进行放大，使用<code>d</code>向左移动到2260ms左右，如下图：<br><img src="/images/mobile/android_systrace_output_zoom.png" title="android systrace output detail images"></p>
+<p>发现对于那些<code>performTraversals</code>处理超过16ms的帧，其中<code>eglSwapBuffers</code>处理的时间都比较长，这应该就是问题所在。</p>
+<p>使用usb线连接上手机，在命令行下运行：<br>    python systrace.py -h</p>
+<p>可以查看相关使用方法。</p>
+<blockquote>
+<p>systrace是在在android4.1上新增的工具，在4.1,4.2和4.3上使用的方法不同</p>
+</blockquote>
+<p>reference：</p>
+<p>[^1] <a href="http://www.curious-creature.org/docs/android-performance-case-study-1.html" target="_blank" rel="external">http://www.curious-creature.org/docs/android-performance-case-study-1.html</a></p>
+<p>[^2] <a href="http://www.curious-creature.org/docs/android-performance-case-study-1.html" target="_blank" rel="external">http://www.curious-creature.org/docs/android-performance-case-study-1.html</a></p>
+<p>[^3] <a href="http://www.vogella.com/articles/AndroidTools/article.html" target="_blank" rel="external">http://www.vogella.com/articles/AndroidTools/article.html</a></p>
+<p>[^4] <a href="http://blog.csdn.net/aaa2832/article/details/7849400" target="_blank" rel="external">http://blog.csdn.net/aaa2832/article/details/7849400</a></p>
+<p>[^5] <a href="http://www.cnblogs.com/taobox/articles/3405931.html" target="_blank" rel="external">http://www.cnblogs.com/taobox/articles/3405931.html</a></p>
+<p>[^6] <a href="http://bigflake.com/systrace/" target="_blank" rel="external">http://bigflake.com/systrace/</a></p>
+<p>[^7] <a href="http://developer.android.com/tools/debugging/systrace.html" target="_blank" rel="external">http://developer.android.com/tools/debugging/systrace.html</a></p>
+<p>[^8] <a href="http://kitoslab-eng.blogspot.com/2013/01/aprof-android-profiler-profiling-tool.html" target="_blank" rel="external">http://kitoslab-eng.blogspot.com/2013/01/aprof-android-profiler-profiling-tool.html</a></p>
+<p>[^9] <a href="http://udinic.wordpress.com/tag/rendering/" target="_blank" rel="external">http://udinic.wordpress.com/tag/rendering/</a></p>
+</div></article><div class="tags"><a href="/tags/mobile/">mobile</a><a href="/tags/android/">android</a><a href="/tags/profile/">profile</a></div><div class="paginator"><a href="/2013/12/18/deploy-sentry-in-product/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2013/11/16/pdo-mysql-escape-string/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2013/11/22/android-app-profile-tools/index.html" data-title="初探Android应用性能分析" data-url="http://debughacks.github.io/2013/11/22/android-app-profile-tools/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>

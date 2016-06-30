@@ -1,0 +1,143 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">使用Graphite和cabot搭建监控服务</h1><span class="post-time">Oct 1, 2014</span><div class="post-content"><p>说起监控，我们一般会首先想到<code>zabbix</code>，<code>nagios</code>，<code>ganglia</code>等等。但是对于非<code>ops</code>开发人员而言，这些东西，多多少少让人感到陌生。所以本文将从一个<code>服务端开发人员</code>的视角，介绍如何通过<code>graphite</code>，<code>cabot</code>，加一个<code>shell</code>定时脚本，搭建监控报警服务。<br><a id="more"></a></p>
+<h1 id="python环境安装"><a href="#python环境安装" class="headerlink" title="python环境安装"></a>python环境安装</h1><p>虽然linux系统上一般都有python环境，但是默认的python版本较低。而且<code>yum</code>等系统工具，都依赖于默认的python。所以推荐的做法是再安装一个python，并使用<code>virtualenv</code>等工具，分项目进行环境管理，并与系统默认的python环境进行隔离。</p>
+<p>以python2.7.3为例，介绍python环境的安装。</p>
+<h2 id="安装步骤"><a href="#安装步骤" class="headerlink" title="安装步骤"></a>安装步骤</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">sudo yum install bzip2-devel.x86_64</div><div class="line">sudo yum install sqlite-devel.x86_64</div><div class="line">sudo yum install readline-devel.x86_64</div><div class="line">sudo yum install openssl-devel.x86_64</div><div class="line"></div><div class="line">wget http://www.python.org/ftp/python/2.7.3/Python-2.7.3.tar.bz2</div><div class="line">tar jxvf Python-2.7.3.tar.bz2</div><div class="line">cd Python-2.7.3</div><div class="line">./configure --prefix=/usr/local/python2.7.3</div><div class="line">make &amp;&amp; sudo make install</div><div class="line"></div><div class="line">cd ..</div><div class="line">wget https://pypi.python.org/packages/source/d/distribute/distribute-0.6.49.tar.gz --no-check-certificate</div><div class="line">tar zxvf distribute-0.6.49.tar.gz</div><div class="line">cd distribute-0.6.49</div><div class="line">sudo /usr/local/python2.7.3/bin/python setup.py install</div><div class="line">sudo /usr/local/python2.7.3/bin/easy_install pbr</div><div class="line"></div><div class="line">cd ..</div><div class="line">wget https://pypi.python.org/packages/source/v/virtualenv/virtualenv-1.10.1.tar.gz --no-check-certificate</div><div class="line">tar zxvf virtualenv-1.10.1.tar.gz</div><div class="line">cd virtualenv-1.10.1</div><div class="line">sudo /usr/local/python2.7.3/bin/python setup.py install</div><div class="line">sudo /usr/local/python2.7.3/bin/easy_install virtualenvwrapper</div></pre></td></tr></table></figure>
+<blockquote>
+<p>如果遇到 [FATAL] Failed to create text with cairo, this probably means cairo cant find any fonts. Install some system fonts and try again。可以尝试安装bitmap font。</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">sudo yum install bitmap.x86_64</div><div class="line">sudo yum install bitmap-fonts-compat.noarch</div></pre></td></tr></table></figure>
+<h2 id="相关配置"><a href="#相关配置" class="headerlink" title="相关配置"></a>相关配置</h2><ul>
+<li>创建管理python环境的用户</li>
+</ul>
+<p>为了便于环境的统一管理，创建一个普通用户进行新创建python环境的管理和相关python扩展的安装。同时，向数字公司的<code>addops</code>们致敬。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">useradd appops</div></pre></td></tr></table></figure></p>
+<ul>
+<li>创建python环境安装目录</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">sudo mkdir -p /data/server/python-envs</div><div class="line">sudo chown -R appops.appops /data/server</div></pre></td></tr></table></figure>
+<ul>
+<li>配置新安装的python2.7.3环境</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">sudo su appops -c &apos;vim ~/.bashrc&apos;</div></pre></td></tr></table></figure>
+<p>添加如下内容<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">export WORKON_HOME=/data/server/python-envs</div><div class="line">export VIRTUALENVWRAPPER_PYTHON=/usr/local/python2.7.3/bin/python</div><div class="line">export VIRTUALENVWRAPPER_VIRTUALENV=/usr/local/python2.7.3/bin/virtualenv</div><div class="line">source /usr/local/python2.7.3/bin/virtualenvwrapper.sh</div></pre></td></tr></table></figure></p>
+<h1 id="搭建graphite监控服务"><a href="#搭建graphite监控服务" class="headerlink" title="搭建graphite监控服务"></a>搭建graphite监控服务</h1><h2 id="安装步骤-1"><a href="#安装步骤-1" class="headerlink" title="安装步骤"></a>安装步骤</h2><ul>
+<li><p>创建安装目录</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">sudo mkdir /opt/graphite</div><div class="line">sudo chown -R appops.appops /opt/graphite</div></pre></td></tr></table></figure>
+</li>
+<li><p>创建python虚拟环境</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">sudo su appops</div><div class="line">source ~/.bashrc</div><div class="line">mkvirtualenv graphite</div></pre></td></tr></table></figure>
+</li>
+<li><p>graphite安装</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">pip install whisper</div><div class="line">pip install carbon</div><div class="line">pip install graphite-web</div><div class="line">pip install django==1.5</div><div class="line">pip install django-tagging</div><div class="line">pip install uwsgi</div><div class="line">pip install MySQL-python</div><div class="line">pip install daemonize</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>graphite使用<code>cairo</code>进行绘图，由于系统自带的cairo版本较低（需要cairo1.10以上），使用pip安装cairo会出错，所以采用编译安装。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">wget http://cairographics.org/releases/pycairo-1.8.8.tar.gz</div><div class="line">tar zxvf pycairo-1.8.8.tar.gz</div><div class="line">python -c &quot;import sys; print sys.prefix&quot;</div><div class="line">cd pycairo-1.8.8</div><div class="line">./configure --prefix=/data/server/python-envs/graphite</div><div class="line">make</div><div class="line">make install</div></pre></td></tr></table></figure></p>
+<ul>
+<li>目录说明<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">bin -- 数据收集相关工具</div><div class="line">conf -- 数据存储相关配置文件</div><div class="line">    carbon.conf -- 数据收集carbon进程涉及的配置</div><div class="line">    dashboard.conf -- Dashboard UI相关配置</div><div class="line">    graphite.wsgi -- wsgi相关配置</div><div class="line">    storage-schemas.conf -- Schema definitions for Whisper files</div><div class="line">    whitelist.conf -- 定义允许存储的metrics白名单</div><div class="line">    graphTemplates.conf -- 图形化展示数据时使用的模板</div><div class="line">examples -- 示例脚本</div><div class="line">lib -- carbon和twisted库</div><div class="line">storage -- 数据文件存储目录</div><div class="line">webapp -- 数据前端展示涉及程序</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h2 id="配置Graphite-web"><a href="#配置Graphite-web" class="headerlink" title="配置Graphite-web"></a>配置Graphite-web</h2><ul>
+<li>初始化配置文件<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">cd /opt/graphite/webapp/graphite</div><div class="line">cp local_settings.py.example local_settings.py</div><div class="line">cp /opt/graphite/conf/graphite.wsgi.example /opt/graphite/conf/graphite.wsgi</div><div class="line">cp /opt/graphite/conf/graphTemplates.conf.example /opt/graphite/conf/graphTemplates.conf</div><div class="line">cp /opt/graphite/conf/dashboard.conf.example /opt/graphite/conf/dashboard.conf</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>修改或者增加如下配置：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">TIME_ZONE</div><div class="line">DEBUG</div><div class="line">SECRET_KEY</div><div class="line">DATABASES</div></pre></td></tr></table></figure></p>
+<p>示例配置文件<a href="https://gist.github.com/jqlblue/88f8a9b14bbe4bae3666" target="_blank" rel="external">local_settings.py</a></p>
+<ul>
+<li><p>初始化数据库</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">python manage.py syncdb</div></pre></td></tr></table></figure>
+</li>
+<li><p>启动graphite-web</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">uwsgi --http localhost:8085 --master --processes 1 --home /data/server/python-envs/graphite --pythonpath /opt/graphite/webapp/graphite --wsgi-file=/opt/graphite/conf/graphite.wsgi --enable-threads --thunder-lock</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<img src="/images/graphite/web.jpg" title="graphite web">
+<h2 id="配置数据收集服务"><a href="#配置数据收集服务" class="headerlink" title="配置数据收集服务"></a>配置数据收集服务</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">cp /opt/graphite/conf/carbon.conf.example /opt/graphite/conf/carbon.conf</div><div class="line">cp /opt/graphite/conf/storage-schemas.conf.example /opt/graphite/conf/storage-schemas.conf</div><div class="line">cp /opt/graphite/conf/whitelist.conf.example /opt/graphite/conf/whitelist.conf</div></pre></td></tr></table></figure>
+<p>编辑<code>/opt/graphite/lib/carbon/util.py</code>，将</p>
+<pre><code>from twisted.scripts._twistd_unix import daemonize
+</code></pre><p>替换成</p>
+<pre><code>import daemonize
+</code></pre><p>否则启动cabon时会遇到<code>ImportError: cannot import name daemonize</code>。</p>
+<ul>
+<li>配置存储白名单<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">vim /opt/graphite/conf/whitelist.conf</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>添加</p>
+<pre><code>^test\..*
+^server\..*
+</code></pre><p>即只存储以<code>test.</code>和<code>server.</code>开头的metrics。</p>
+<ul>
+<li>配置存储Schemas<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">vim /opt/graphite/conf/storage-schemas.conf</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>添加</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">[server]</div><div class="line">pattern = ^server\..*</div><div class="line">retentions = 60s:1d,5m:7d,15m:3y</div><div class="line"></div><div class="line">[default]</div><div class="line">pattern = ^test\..*</div><div class="line">retentions = 60s:1d,5m:7d</div></pre></td></tr></table></figure>
+<p>上面的配置，会对于<code>test.</code>开头的metrics，以60秒为精度存储一天，以5分钟为精度存储7天。即查询一天内的数据时，可以精确到1分钟，查询7天内的数据时，只能精确到5分钟。</p>
+<ul>
+<li>启动cabon<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">python /opt/graphite/bin/carbon-cache.py --config=/opt/graphite/conf/carbon.conf --debug start</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h1 id="收集监控数据"><a href="#收集监控数据" class="headerlink" title="收集监控数据"></a>收集监控数据</h1><p>etsy开源了一个叫<a href="https://github.com/etsy/statsd" target="_blank" rel="external">statsd</a>的daemon，可用于将监控数据收集到graphite，但那玩意是nodejs写的。</p>
+<p>为了保持方案的简单，采用<code>crontab</code>的方式，利用<a href="https://gist.github.com/jqlblue/c7473473f8a7357167b8" target="_blank" rel="external">shell脚本</a>将要收集的数据通过udp协议直接发送至graphite。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">#!/bin/sh</div><div class="line"></div><div class="line">HOST=$(hostname | awk -F&apos;.&apos; &apos;&#123;print $1&#125;&apos;)</div><div class="line">IDC=&quot;local&quot;</div><div class="line"></div><div class="line">SYSTEM_LOAD=$(awk &apos;&#123;print $1&#125;&apos; /proc/loadavg)</div><div class="line">SYSTEM_MEMORY_FREE=$(free -m | grep &apos;buffers/cache&apos; | awk &apos;&#123;print $NF&#125;&apos;)</div><div class="line">SYSTEM_SWAP_USE=$(free -m | grep &apos;Swap&apos; | awk &apos;&#123;print $(NF-1)&#125;&apos;)</div><div class="line">SYSTEM_DISK_USED=$(df -h | grep &apos;/&apos; | awk &apos;BEGIN&#123;_max=0&#125;&#123;len=length($5);i=substr($5,0,len-1);if(_max&lt;i)&#123;_max=i&#125;&#125;END&#123;print _max&#125;&apos;)</div><div class="line"></div><div class="line">TIMESTAMP=$(date +%s)</div><div class="line"></div><div class="line">### send to garphite through udp port 2003 ########</div><div class="line">echo -n &quot;server.$IDC.$HOST.system.load $SYSTEM_LOAD $TIMESTAMP&quot; &gt; /dev/udp/127.0.0.1/2003</div><div class="line">echo -n &quot;server.$IDC.$HOST.system.memory_free $SYSTEM_MEMORY_FREE $TIMESTAMP&quot; &gt; /dev/udp/127.0.0.1/2003</div><div class="line">echo -n &quot;server.$IDC.$HOST.system.swap_used $SYSTEM_SWAP_USED $TIMESTAMP&quot; &gt; /dev/udp/127.0.0.1/2003</div><div class="line">echo -n &quot;server.$IDC.$HOST.system.disk_used $SYSTEM_DISK_USED $TIMESTAMP&quot; &gt; /dev/udp/127.0.0.1/2003</div></pre></td></tr></table></figure>
+<img src="/images/graphite/data-view.jpg" title="graphite monitor data view">
+<p><em>监控数据收集和展示流图</em></p>
+<img src="/images/graphite/data-flow.jpg" title="graphite monitor data flow">
+<h1 id="搭建cabot报警服务"><a href="#搭建cabot报警服务" class="headerlink" title="搭建cabot报警服务"></a>搭建cabot报警服务</h1><p><code>cabot</code>是一个轻量级的监控报警服务。其报警可以基于：</p>
+<pre><code>graphite收集的监控数据
+url的响应内容和状态码
+jenkins编译任务的状态
+</code></pre><ul>
+<li>安装依赖</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">sudo gem sources --remove http://rubygems.org/</div><div class="line">sudo gem sources -a http://ruby.taobao.org/</div><div class="line">sudo gem install foreman</div></pre></td></tr></table></figure>
+<blockquote>
+<p>因为foreman要求ruby版本需要在1.9.3以上，如果系统自带ruby版本过低，可以通过rvm安装ruby，再安装foreman。</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">sudo yum install npm</div><div class="line">sudo npm install -g coffee-script less@1.3 --registry http://registry.npmjs.org/</div></pre></td></tr></table></figure>
+<ul>
+<li>初始化目录</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">sudo su appops</div><div class="line">mkdir /data/server/alter</div><div class="line">cd /data/server/alter</div><div class="line">mkvirtualenv cabot</div></pre></td></tr></table></figure>
+<ul>
+<li>安装cabot</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">git clone https://github.com/arachnys/cabot.git</div><div class="line">cd cabot</div><div class="line">cp conf/development.env.example conf/development.env</div></pre></td></tr></table></figure>
+<p>修改<a href="https://gist.github.com/jqlblue/165d50a949cd4aae2191" target="_blank" rel="external">setup.py</a>，添加</p>
+<pre><code>&apos;MySQL-python==1.2.5&apos;,
+</code></pre><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">python setup.py install</div><div class="line">/bin/sh ./setup_dev.sh</div></pre></td></tr></table></figure>
+<ul>
+<li>配置cabot</li>
+</ul>
+<p>使用foreman启动cabot时，会先读取<code>.foreman</code></p>
+<pre><code># vi: set ft=yaml :
+
+procfile: Procfile.dev
+env: conf/development.env
+</code></pre><p><code>Procfile.dev</code>内容如下：<br>    web:       python manage.py runserver 0.0.0.0:$PORT<br>    celery:    celery -A cabot worker –loglevel=DEBUG -B -c 8 -Ofair</p>
+<p>其中定义了启动cabot-web和celery任务队列时使用的命令，针对不同的环境，可以酌情修改<code>.foreman</code>和对应的<code>procfile</code>及<code>env</code>。</p>
+<p>对于邮件报警，需要修改<a href="https://gist.github.com/jqlblue/a6329a7649be16e92df4" target="_blank" rel="external">conf/development.env</a>中的如下内容：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">DATABASE_URL -- 数据库配置</div><div class="line">TIME_ZONE -- 时区</div><div class="line">ADMIN_EMAIL</div><div class="line">CABOT_FROM_EMAIL</div><div class="line">CELERY_BROKER_URL -- celery任务队列配置</div><div class="line">SES_HOST -- smtp host</div><div class="line">SES_USER -- 发送邮件的用户</div><div class="line">SES_PASS -- 发送邮件用户的密码</div><div class="line">SES_PORT -- smtp port</div></pre></td></tr></table></figure></p>
+<ul>
+<li>启动cabot<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">nohup foreman start 2&gt;&amp;1 &gt; /dev/null &amp;</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<img src="/images/graphite/cabot_service.jpg" title="cabot service">
+<img src="/images/graphite/cabot_service_check.jpg" title="cabot service check">
+<img src="/images/graphite/cabot_service_check_detail.jpg" title="cabot service check detail">
+<p>reference：</p>
+<p>[^1] <a href="http://graphite.readthedocs.org/en/latest/overview.html" target="_blank" rel="external">http://graphite.readthedocs.org/en/latest/overview.html</a></p>
+<p>[^2] <a href="http://cabotapp.com/qs/quickstart.html" target="_blank" rel="external">http://cabotapp.com/qs/quickstart.html</a></p>
+<p>[^3] <a href="https://gist.github.com/jirutka/8636572" target="_blank" rel="external">https://gist.github.com/jirutka/8636572</a></p>
+</div></article><div class="tags"><a href="/tags/devops/">devops</a><a href="/tags/monitor/">monitor</a></div><div class="paginator"><a href="/2014/11/23/build-payment-system-in-one-week/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2014/08/02/synchronization-user-account-on-linux/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2014/10/01/use-graphite-and-alter-build-monitor-system/index.html" data-title="使用Graphite和cabot搭建监控服务" data-url="http://debughacks.github.io/2014/10/01/use-graphite-and-alter-build-monitor-system/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>

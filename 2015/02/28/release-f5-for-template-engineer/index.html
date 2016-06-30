@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">那个套模版的，放开你的F5</h1><span class="post-time">Feb 28, 2015</span><div class="post-content"><p>老江说过：“科学技术是第一生产力”。技术的魅力在于通过改善相关流程或者提供相关工具，对人们的生活进行改善，make live esaier。</p>
+<a id="more"></a>
+<p><em>对于自喻为模版工程师的同行们，套模版的流程大抵是：</em></p>
+<pre><code>写代码，保存
+
+打开浏览器，按F5刷新页面，检查相关前端效果
+</code></pre><p>我记得<a href="http://weibo.com/yjf10" target="_blank" rel="external">轩脉刃</a>曾经写过一个统计鼠标按键的小工具。如果对模版工程师工作时键盘的按键进行统计，那么F5的使用率肯定不容忽视。</p>
+<p>倘若能在代码保存后就自动刷新浏览器，那不仅能解放模版工程师的F5按键，也能提升他们的开发效率。突然感觉非常美妙。</p>
+<p>我记得有人说过，这个世界上不缺乏原创的idea，缺的只是一双能发现它的眼睛。</p>
+<p>正如<code>livereload</code>所说的－“The Web Developer Wonderland”。</p>
+<p>使用<code>livereload</code>，<em>通过如下几个步骤</em>，就可以做到当我们保存代码后，自动刷新浏览器中相关页面内容。</p>
+<blockquote>
+<p>安装livereload浏览器扩展</p>
+</blockquote>
+<p>相关浏览器扩展的下载地址如下：</p>
+<p><a href="http://feedback.livereload.com/knowledgebase/articles/86242-how-do-i-install-and-use-the-browser-extensions" target="_blank" rel="external">browser extensions</a></p>
+<blockquote>
+<p>安装livereload server端</p>
+</blockquote>
+<p>安装python环境，然后在终端执行</p>
+<pre><code>pip install livereload
+</code></pre><p>或者</p>
+<pre><code>easy_install livereload
+</code></pre><blockquote>
+<p>启动livereload server端</p>
+</blockquote>
+<p>假设我的代码目录在<code>/home/galendy/code/demo</code>，在终端执行</p>
+<pre><code>livereload /home/galendy/code/demo
+</code></pre><blockquote>
+<p>点击浏览器扩展</p>
+</blockquote>
+<p><code>livereload</code>的基本原理是：</p>
+<pre><code>livereload server端会启动本地的socket服务（默认开放本地的35729端口），当监听的目录下的文件内容有变化时，向该socket写入数据
+
+livereload浏览器扩展会连接本地的35729端口，当有新消息到来时，会在浏览器中插入一段js代码，刷新当前页面
+</code></pre><p>实际上，前端工程师还会使用<code>livereload</code>完成css，js等文件的合并和压缩。想要了解更多，请参考：</p>
+<p><a href="http://livereload.com/" target="_blank" rel="external">livereload</a></p>
+<p><a href="http://livereload.readthedocs.org/en/latest/" target="_blank" rel="external">python livereload</a></p>
+</div></article><div class="tags"><a href="/tags/php/">php</a><a href="/tags/collect/">collect</a><a href="/tags/python/">python</a></div><div class="paginator"><a href="/2016/06/30/charles-https/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2015/01/25/categorize-web-information/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2015/02/28/release-f5-for-template-engineer/index.html" data-title="那个套模版的，放开你的F5" data-url="http://debughacks.github.io/2015/02/28/release-f5-for-template-engineer/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>

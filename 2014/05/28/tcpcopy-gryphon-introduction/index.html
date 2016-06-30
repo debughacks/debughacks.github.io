@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">再话Tcpcopy的胞弟gryphon</h1><span class="post-time">May 28, 2014</span><div class="post-content"><p>gryphon是由网易研发，能够模拟千万级别并发用户进行压力测试的一个软件，可用于网络消息推送服务方面的压力测试和传统web服务的压力测试。目前由网易的 <a href="http://weibo.com/tcpcopy" target="_blank" rel="external">王斌</a>进行维护。更多介绍可参见<a href="https://github.com/wangbin579/gryphon" target="_blank" rel="external">A powerful tool to simulate millions of concurrent users for loading testing</a><br><a id="more"></a><br>gryphon的安装和使用方法分为<code>传统架构方式</code>和<code>高级架构方式</code>。</p>
+<h1 id="相关角色说明"><a href="#相关角色说明" class="headerlink" title="相关角色说明"></a>相关角色说明</h1><ul>
+<li>gryphon客户端（/usr/local/bin/gryphon）</li>
+<li>intercept拦截进程（/usr/local/bin/intercept）</li>
+</ul>
+<p>测试时，gryphon客户端读取录制的pcap文件（可以通过tcpdump产生），通过<code>Raw Socket</code>修改请求并发送到测试机。因为这些请求的来源ip可能是模拟的，为了连接的正常关闭，需要拦截测试机的响应包。</p>
+<pre><code>在传统架构下：
+1 netfilter-iptables在协议栈将数据包交给内核中的ip_queue模块
+2 intercept在用户态通过netlink socket接收内核传来的数据报文
+3 将处理后的报文以及对报文的处理意见（ACCEPT，DROP等）传递给内核协议栈
+</code></pre><figure class="highlight c"><figcaption><span>communication/tc_socket.c</span></figcaption><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">tc_raw_socket_out_init()</div><div class="line">&#123;</div><div class="line">    <span class="keyword">int</span> fd, n;</div><div class="line"></div><div class="line">    n = <span class="number">1</span>;</div><div class="line"></div><div class="line">    <span class="comment">/*</span></div><div class="line">     * On Linux when setting the protocol as IPPROTO_RAW,</div><div class="line">     * then by default the kernel sets the IP_HDRINCL option and</div><div class="line">     * thus does not prepend its own IP header.</div><div class="line">     */</div><div class="line">    fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);</div></pre></td></tr></table></figure>
+<figure class="highlight c"><figcaption><span>communication/tc_interception.c</span></figcaption><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line">tc_nl_event_process(<span class="keyword">tc_event_t</span> *rev)</div><div class="line">&#123;</div><div class="line">    <span class="keyword">char</span>            buffer[<span class="number">65536</span>];</div><div class="line">    <span class="keyword">register</span> <span class="keyword">int</span>    i, pass_through_flag = <span class="number">0</span>;</div><div class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span>   packet_id;</div><div class="line">    <span class="keyword">tc_ip_header_t</span> *ip_hdr;</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (tc_nl_socket_recv(rev-&gt;fd, buffer, <span class="number">65536</span>) == TC_ERROR)</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">return</span> TC_ERROR;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    ip_hdr = tc_nl_ip_header(buffer);</div><div class="line">    packet_id = tc_nl_packet_id(buffer);</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (ip_hdr != <span class="literal">NULL</span>) &#123;</div><div class="line">        <span class="comment">/* check if it is the valid user to pass through firewall */</span></div><div class="line">        <span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; srv_settings.passed_ips.num; i++) &#123;</div><div class="line">            <span class="keyword">if</span> (srv_settings.passed_ips.ips[i] == ip_hdr-&gt;daddr) &#123;</div><div class="line">                pass_through_flag = <span class="number">1</span>;</div><div class="line">                <span class="keyword">break</span>;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        tot_resp_packs++;</div><div class="line"></div><div class="line">        <span class="keyword">if</span> (pass_through_flag) &#123;</div><div class="line"></div><div class="line">            <span class="comment">/* pass through the firewall */</span></div><div class="line">            dispose_netlink_packet(rev-&gt;fd, NF_ACCEPT, packet_id);</div><div class="line"></div><div class="line">        &#125; <span class="keyword">else</span> &#123;</div><div class="line"></div><div class="line">            tot_copy_resp_packs++;</div><div class="line">            router_update(srv_settings.old, ip_hdr);</div><div class="line">            <span class="comment">/* drop the packet */</span></div><div class="line">            dispose_netlink_packet(rev-&gt;fd, NF_DROP, packet_id);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="keyword">return</span> TC_OK;</div><div class="line">&#125;</div><div class="line"></div></pre></td></tr></table></figure>
+<pre><code>在高级架构下，是通过在测试机上配置静态路由规则，将响应路由到辅助服务器进行处理。
+</code></pre><img src="/images/gryphon/raw_socket.jpg" title="raw socket">
+<h1 id="传统架构下安装并使用"><a href="#传统架构下安装并使用" class="headerlink" title="传统架构下安装并使用"></a>传统架构下安装并使用</h1><p>在传统架构下，<code>intercept拦截进程</code>需要运行在测试机上，用于拦截测试机的响应包。</p>
+<h2 id="安装与使用"><a href="#安装与使用" class="headerlink" title="安装与使用"></a>安装与使用</h2><h3 id="在测试机安装intercept拦截进程"><a href="#在测试机安装intercept拦截进程" class="headerlink" title="在测试机安装intercept拦截进程"></a>在测试机安装intercept拦截进程</h3><pre><code>git clone git://github.com/wangbin579/tcpcopy.git
+cd tcpcopy
+sh autogen.sh
+./configure --prefix=/usr/local/tcocopy --enable-single
+make
+sudo make install
+</code></pre><h3 id="安装gryphon客户端"><a href="#安装gryphon客户端" class="headerlink" title="安装gryphon客户端"></a>安装gryphon客户端</h3><pre><code>git clone git://github.com/wangbin579/gryphon.git
+cd gryphon
+sh autogen.sh
+./configure --prefix=/usr/local/gryphon --enable-single
+make
+sudo make install
+</code></pre><h3 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h3><p>以<code>intercept拦截进程</code>安装在测试机<strong>10.16.15.118</strong>，应用端口是<strong>80</strong>，<code>gryphon客户端</code>安装在<strong>10.16.15.117</strong>为例，说明gryphon在传统架构下的基本使用方法。</p>
+<ul>
+<li>tcpdump抓包录制pcap文件</li>
+</ul>
+<p>可以在线上服务器抓包录制，并拷贝到<code>gryphon客户端</code>所在的服务器<strong>10.16.15.117</strong></p>
+<pre><code>tcpdump -i eth0 port 80 -s 0 -w xxx.pcap
+</code></pre><ul>
+<li>拦截响应包</li>
+</ul>
+<p>在测试机<strong>10.16.15.118</strong>上操作<br>    modprobe ip_queue<br>    iptables -I OUTPUT -p tcp –sport 80 -j QUEUE<br>    /usr/local/tcpcopy/bin/intercept</p>
+<blockquote>
+<p>如果内核版本3.5，可以使用nfqueue</p>
+</blockquote>
+<ul>
+<li>发送测试请求</li>
+</ul>
+<p>在<code>gryphon客户端</code>所在服务器<strong>10.16.15.117</strong>上操作<br>    /usr/local/gryphon/bin/gryphon -x 80-10.16.15.118:80 -f ./xxx.pcap -s 10.16.15.118 -u 1000 -a 2 -c 10.17.15.*</p>
+<p>上述命令，从xxx.pcap抓包文件中提取出访问80端口的用户会话过程，模拟1000个用户，将请求复制到测试机<strong>10.16.15.118</strong>的<strong>80</strong>端口中去。其中用户ip地址的范围是10.17.15.*。</p>
+<blockquote>
+<p>-a参数用于加快数据包的发送速度。-a 2代表将数据包之间的发送间隔缩短一半，相当于加速2倍。也可和－i配合，如 －a 10 －i 2048</p>
+</blockquote>
+<p>gryphon拦截进程中各个基本参数的释义如下：<br>    gryphon -x historyServerPort-targetServerIP:targetServerPort -f <pcapfile,> -s <intercept address=""> -u <user num=""> -c <ip range,=""></ip></user></intercept></pcapfile,></p>
+<h2 id="调试步骤"><a href="#调试步骤" class="headerlink" title="调试步骤"></a>调试步骤</h2><p><code>gryphon客户端</code>和<code>intercept拦截进程</code>运行时，会在当前工作目录生成<code>error_gryphon.log</code>，<code>error_intercept.log</code>日志文件，里面有相关运行信息。当测试过程不能正常工作时，可优先查看相关日志。</p>
+<p>其次就是在测试机或者<code>gryphon客户端</code>所在的服务器上进行抓包。确保<code>gryphon客户端</code>发出请求，并且没有收到测试机的响应包，如：<br><img src="/images/gryphon/gryphon_tcpdump.png" title="gryphon tcpdump"></p>
+<h1 id="高级架构下安装并使用"><a href="#高级架构下安装并使用" class="headerlink" title="高级架构下安装并使用"></a>高级架构下安装并使用</h1><p>在高级架构下，<code>intercept拦截进程</code>需要运行在辅助服务上，用于拦截测试机的响应包。</p>
+<h2 id="安装与使用-1"><a href="#安装与使用-1" class="headerlink" title="安装与使用"></a>安装与使用</h2><h3 id="在测试机安装intercept拦截进程-1"><a href="#在测试机安装intercept拦截进程-1" class="headerlink" title="在测试机安装intercept拦截进程"></a>在测试机安装intercept拦截进程</h3><pre><code>git clone git://github.com/wangbin579/tcpcopy.git
+cd tcpcopy
+sh autogen.sh
+./configure --prefix=/usr/local/adv-tcpcopy --enable-single  --enable-pcap --enable-advanced
+make
+sudo make install
+</code></pre><h3 id="安装gryphon客户端-1"><a href="#安装gryphon客户端-1" class="headerlink" title="安装gryphon客户端"></a>安装gryphon客户端</h3><pre><code>git clone git://github.com/wangbin579/gryphon.git
+cd gryphon
+sh autogen.sh
+./configure --prefix=/usr/local/adv-gryphon --enable-single --enable-advanced
+make
+sudo make install
+</code></pre><h3 id="使用方法-1"><a href="#使用方法-1" class="headerlink" title="使用方法"></a>使用方法</h3><p>以<code>intercept拦截进程</code>安装在辅助服务器<strong>10.16.15.116</strong>，<code>gryphon客户端</code>安装在<strong>10.16.15.117</strong>，测试机<strong>10.16.15.118</strong>的应用端口是<strong>80</strong>为例，说明gryphon在高级架构下的使用方法。</p>
+<ul>
+<li>tcpdump抓包录制pcap文件</li>
+</ul>
+<p>可以在线上服务器抓包录制，并拷贝到<code>gryphon客户端</code>所在的服务器<strong>10.16.15.117</strong></p>
+<pre><code>tcpdump -i eth0 port 80 -s 0 -w xxx.pcap
+</code></pre><ul>
+<li>拦截响应包</li>
+</ul>
+<p>在测试机<strong>10.16.15.118</strong>上设置静态路由，将响应包路由到辅助服务器<strong>10.16.15.116</strong><br>    route add -net 10.17.15.0 netmask 255.255.255.0 gw 10.16.15.116</p>
+<p>查看是否设置成功<br>    $ route<br>    Kernel IP routing table<br>    Destination     Gateway         Genmask         Flags Metric Ref    Use Iface<br>    10.17.15.0      10.16.15.116    255.255.255.0   UG    0      0        0 eth0<br>    10.16.14.0      <em>               255.255.254.0   U     0      0        0 eth0<br>    169.254.0.0     </em>               255.255.0.0     U     0      0        0 eth0<br>    default         10.16.14.1      0.0.0.0         UG    0      0        0 eth0</p>
+<p>如果设置错了，可以删除并重新添加<br>    route del -net 10.17.15.0 netmask 255.255.255.0</p>
+<p>在辅助服务器<strong>10.16.15.116</strong>上启动intercept拦截进程<br>    /usr/local/adv-tcpcopy/bin/intercept -F ‘tcp and src port 80’</p>
+<ul>
+<li>发送测试请求</li>
+</ul>
+<p>在<code>gryphon客户端</code>所在服务器<strong>10.16.15.117</strong>上操作<br>    /usr/local/adv-gryphon/bin/gryphon -x 80-10.16.15.118:80 -f ./xxx.pcap -s 10.16.15.116 -u 1000 -c 10.17.15.*</p>
+<p><strong> Reference </strong></p>
+<p>[^1] <a href="http://www.ibm.com/developerworks/cn/linux/l-ntflt/index.html" target="_blank" rel="external">http://www.ibm.com/developerworks/cn/linux/l-ntflt/index.html</a></p>
+<p>[^2] <a href="http://www.ibm.com/developerworks/cn/linux/l-netlink/index.html" target="_blank" rel="external">http://www.ibm.com/developerworks/cn/linux/l-netlink/index.html</a></p>
+<p>[^3] <a href="http://www.tenouk.com/Module42a.html" target="_blank" rel="external">http://www.tenouk.com/Module42a.html</a></p>
+</div></article><div class="tags"><a href="/tags/devops-linux/">devops, linux</a></div><div class="paginator"><a href="/2014/06/08/manual-update-android-ota-update/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2014/05/14/a-trouble-in-request-https-in-curl/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2014/05/28/tcpcopy-gryphon-introduction/index.html" data-title="再话Tcpcopy的胞弟gryphon" data-url="http://debughacks.github.io/2014/05/28/tcpcopy-gryphon-introduction/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>

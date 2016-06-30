@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta charset="utf-8"><meta name="X-UA-Compatible" content="IE=edge"><meta name="description"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Debug Hacks</title><link rel="short icon" href="/favicon.ico"><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/fonts/iconfont/iconfont.css"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.5.0/css/font-awesome.min.css"><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Sans+Pro:400,600|Roboto Mono"><!-- baidu analytics--><script type="text/javascript">var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "//hm.baidu.com/hm.js?9e0cbea7d3319c6c94c71dfb93c151b8";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">在Mac系统上使用emacs24打造web开发环境</h1><span class="post-time">Feb 28, 2014</span><div class="post-content"><p>Emacs 是一个强大的、可扩展的文本编辑器。不同于vim，它是一个流行的无模式文本编辑器。尤其是当emacs24内置包管理elpa后，使用通过<code>prelude</code>，<code>goblin</code>等，轻松使用emacs打造一个顺手的diy的web开发环境。<br><a id="more"></a></p>
+<h3 id="安装Emacs24-3"><a href="#安装Emacs24-3" class="headerlink" title="安装Emacs24.3"></a>安装Emacs24.3</h3><h5 id="安装Homebrew"><a href="#安装Homebrew" class="headerlink" title="安装Homebrew"></a>安装Homebrew</h5><p><code>Homebrew</code>是mac系统上的包管理软件，是用<code>Ruby</code>语言编写的。我们可以使用它在终端安装系统没有自带的<code>Unix</code>相关工具。</p>
+<p><em>安装步骤</em></p>
+<pre><code>ruby -e &quot;$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)&quot;
+cd /usr/local/Library &amp;&amp; git stash &amp;&amp; git clean -d -f
+</code></pre><h5 id="通过编译源代码安装Emacs"><a href="#通过编译源代码安装Emacs" class="headerlink" title="通过编译源代码安装Emacs"></a>通过编译源代码安装Emacs</h5><p>在安装<code>Homebrew</code>时，会同时安装<code>gcc</code>和<code>autoconf</code>，所以我们可以直接下载源代码进行编译安装。通过如下地址可以下载到最新的emacs安装文件。<br>    <a href="http://www.gnu.org/software/emacs/" target="_blank" rel="external">http://www.gnu.org/software/emacs/</a></p>
+<p>如果没有<code>wget</code>等工具，可以通过<code>brew</code>进行安装，如：<br>    brew install wget</p>
+<p><em>安装步骤</em><br>    cd /somepath/<br>    wget <a href="http://mirror.bjtu.edu.cn/gnu/emacs/emacs-24.3.tar.gz" target="_blank" rel="external">http://mirror.bjtu.edu.cn/gnu/emacs/emacs-24.3.tar.gz</a><br>    tar zxvf emacs-24.3.tar.gz<br>    cd emacs-24.3<br>    ./autogen.sh<br>    ./configure –with-ns<br>    make install<br>    sudo ln -s /somepath/emacs-24.3/nextstep/Emacs.app /Applications/Emacs24.3.app</p>
+<h5 id="通过Homebrew安装Emacs"><a href="#通过Homebrew安装Emacs" class="headerlink" title="通过Homebrew安装Emacs"></a>通过Homebrew安装Emacs</h5><p><code>Homebrew</code>本身也是下载源代码进行编译安装，但是它可以帮我们简化这一过程。这就是技术的魅力 – make live easier。</p>
+<p><em>安装步骤</em><br>    brew install emacs –cocoa<br>    brew linkapps</p>
+<p>顺利的话，最新版的emacs就安装在mac了。如果中途遇到问题，按照提示解决下就好。</p>
+<p>有可能下载地址被墙，这时通过通过修改源代码的下载地址解决，方法如下：</p>
+<pre><code>1. brew edit softname，如 brew edit emacs
+2. 修改其中的url，保存退出
+</code></pre><p>如：</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">require</span> <span class="string">'formula'</span></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Emacs</span> &lt; Formula</span></div><div class="line">    homepage <span class="string">'http://www.gnu.org/software/emacs/'</span></div><div class="line">    <span class="comment">#url 'http://ftpmirror.gnu.org/emacs/emacs-24.3.tar.gz'</span></div><div class="line">    url <span class="string">'http://mirror.bjtu.edu.cn/gnu/emacs/emacs-24.3.tar.gz'</span></div></pre></td></tr></table></figure>
+<p>安装完成后可以在<code>应用程序</code>，或者<code>Launchpad</code>中启动emacs，它默认长这样：</p>
+<img src="/images/emacs/startup.png" title="emacs start up %}
+<h3 id=" alt="配置Emacs">
+<p>完成<code>jedi</code>，python自动完成的配置<br>    cd ~/.emacs.d/elpa/jedi*<br>    sudo pip install -r requirements.txt</p>
+<p>或者指定pypi源<br>    sudo pip install -i <a href="http://pypi.douban.com/simple" target="_blank" rel="external">http://pypi.douban.com/simple</a> -r requirements.txt</p>
+<h3 id="补充说明"><a href="#补充说明" class="headerlink" title="补充说明"></a>补充说明</h3><ul>
+<li>Goblin-emacs简介</li>
+</ul>
+<p>goblin-emacs在prelude的基础上，对<code>PHP</code>，<code>Python</code>等<code>mode</code>进行了增强，并尽量保持原生的快捷键。相关功能介绍：</p>
+<pre><code>flymake语法检测
+php-mode
+php基于字典的自动完成
+python基于jedi的自动完成
+org-mode
+doxymacs 生成文档注释
+slime－mode
+版本控制工具的集成
+</code></pre><p>当使用emacs编辑<code>ruby</code>或者<code>lua</code>源码时，会自动下载并安装相关<code>mode</code>，相关映射在<code>core/goblin-packages.el</code>中进行配置。</p>
+<ul>
+<li>交换<code>Control</code>键和<code>Caps-Lock</code>键</li>
+</ul>
+<p>因为emacs上的很多快捷键默认都是以<code>Control</code>开始。操作久了小拇指会比较难受，将<code>Control</code>和<code>Caps-Lock</code>进行交换，可以解放要经常蜷缩的小拇指。<br><img src="/images/emacs/swap-control-capslock.png"></p></div></article><div class="tags"><a href="/tags/linux/">linux</a><a href="/tags/mac/">mac</a><a href="/tags/emacs/">emacs</a></div><div class="paginator"><a href="/2014/03/29/read-wirite-on-linux-file-system/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2014/01/08/use-tcpcopy-test-online/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2014/02/28/emacs24-on-mac-and-linux/index.html" data-title="在Mac系统上使用emacs24打造web开发环境" data-url="http://debughacks.github.io/2014/02/28/emacs24-on-mac-and-linux/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+(function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(ds);
+})();</script></section></section><footer><div class="copyright"><p><span class="heart"><i class="fa fa-heart"></i></span><span class="author">GaoYuan</span></p><p class="theme">Theme by <a href="https://github.com/ahonn/hexo-theme-even"> Even</a></p></div><label id="back2top"><i class="fa fa-chevron-up"></i></label></footer></div></body><script src="/js/back2top.js"></script></html>
