@@ -5,7 +5,7 @@
   var s = document.getElementsByTagName("script")[0]; 
   s.parentNode.insertBefore(hm, s);
 })();
-</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">首页</a></li><li class="nav-link"><a href="/archives/" target="_self">归档</a></li><li class="nav-link"><a href="/tags/" target="_self">标签</a></li><li class="nav-link"><a href="/about/" target="_self">关于</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">Linux文件系统如何进行文件存取</h1><span class="post-time">Mar 29, 2014</span><div class="post-content"><p>乍一看，这个题目好像有点小儿科。</p>
+</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">Linux文件系统如何进行文件存取</h1><span class="post-time">Mar 29, 2014</span><div class="post-content"><p>乍一看，这个题目好像有点小儿科。</p>
 <p>写文件嘛<br>    echo hello &gt; /tmp/foo</p>
 <p>读文件嘛<br>    cat /tmp/foo</p>
 <p>对于普通文件的存取，的确可以使用上面的方法。但是在linux操作系统上，一<br>切都是文件。除了<code>普通文件</code>，还包括：<code>目录</code>，<code>符号链接</code>，<code>IPC Endpoints</code>（如pipe，unix socket）和<code>设备文件</code>(块设备，字符设备)。</p>
@@ -73,7 +73,7 @@
 </li>
 </ul>
 <p>预读机制示意图</p>
-<img src="/images/os/fs-pre-read.gif"></div></article><div class="tags"><a href="/tags/linux/">linux</a><a href="/tags/fs/">fs</a></div><div class="paginator"><a href="/2014/04/09/statically-compile-php/" class="prev"><i class="fa fa-chevron-left"></i><span> 上一页</span></a><a href="/2014/02/28/emacs24-on-mac-and-linux/" class="next"><span>下一页</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2014/03/29/read-wirite-on-linux-file-system/index.html" data-title="Linux文件系统如何进行文件存取" data-url="http://debughacks.github.io/2014/03/29/read-wirite-on-linux-file-system/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
+<img src="/images/os/fs-pre-read.gif"></div></article><div class="tags"><a href="/tags/linux/">linux</a><a href="/tags/fs/">fs</a></div><div class="paginator"><a href="/2014/04/09/statically-compile-php/" class="prev"><i class="fa fa-chevron-left"></i><span> Prev</span></a><a href="/2014/02/28/emacs24-on-mac-and-linux/" class="next"><span>Next</span><i class="fa fa-chevron-right"></i></a></div><section id="comments"><div data-thread-key="http://debughacks.github.io/2014/03/29/read-wirite-on-linux-file-system/index.html" data-title="Linux文件系统如何进行文件存取" data-url="http://debughacks.github.io/2014/03/29/read-wirite-on-linux-file-system/index.html" class="ds-thread"></div><script type="text/javascript">var duoshuoQuery = {short_name: "debughacks" };
 (function() {
     var ds = document.createElement('script');
     ds.type = 'text/javascript';ds.async = true;
