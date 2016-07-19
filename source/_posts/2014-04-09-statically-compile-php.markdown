@@ -82,6 +82,20 @@ make LDFLAGS=-ldl
 sudo make install
 ```
 
+
+# 遇到的问题 #
+
+ >>> configure: error: C compiler cannot create executables
+
+需要安装`glibc-static`
+```
+    yum install glibc-static
+```
+>>> undefined reference to `zm_startup_password'
+
+需要修改`ext/standard/basic_functions.c`，具体内容参见 https://github.com/thekid/php-src/commit/4c2b86ef006c71523ca2a8a613cc779773a2bcc6
+
+
 # 检查 #
 
 在命令行执行
@@ -114,14 +128,17 @@ sudo make install
     -rwxr-xr-x 1 root root 18M 04-09 18:11 /usr/local/php5-static/bin/php
 
 可以通过`strip`命令移除调试信息
-
+```
     $ sudo strip /usr/local/php5-static/bin/php
     $ ll -h /usr/local/php5-static/bin/php
-    -rwxr-xr-x 1 root root 6.1M 04-09 18:11 /usr/local/php5-static/bin/php
+    -rwxr-xr-x 1 root root 6.1M 04-09 18:11
+    /usr/local/php5-static/bin/php
+```
 
-原始文件大小| 去除符号表后大小
-:--------------:|:---------------:
-`18M`      | **6.1M**
+| `原始文件大小` | `去除符号表后大小` |
+|:-----:|:----------:|
+|`18M`| `6.1M`|
+
 
 ** reference :**
 
@@ -132,3 +149,6 @@ sudo make install
 [^3] http://www.gnu.org/software/libtool/manual/html_node/Link-mode.html
 
 [^4] http://markmail.org/message/cpoenglavs4vwv32
+
+[^5] https://github.com/thekid/php-src/commit/4c2b86ef006c71523ca2a8a613cc779773a2bcc6
+[^6] http://www.serveridol.com/2014/06/23/configure-error-c-compiler-cannot-create-executables/
