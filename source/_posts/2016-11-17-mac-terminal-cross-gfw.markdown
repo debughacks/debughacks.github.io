@@ -15,7 +15,7 @@ toc: true
 # 土豪的方法 #
 如果你是一个使用mac系统的土豪，那么，访问这个网站 http://nssurge.com/ 就够了。
 
-# othres #
+# others #
 实际上，这才是本文的重点。
 
 ## 准备工作 ##
@@ -59,7 +59,7 @@ ssserver -c /etc/shadowsocks.json -d stop
 ### 安装ss 客户端 ###
 推荐 [ShadowsocksX-NG](https://github.com/shadowsocks/ShadowsocksX-NG)，因为 [ShadowsocksX](https://github.com/shadowsocks/shadowsocks-iOS/releases)已无法正常更新pac文件。
 
-至此，使用浏览器的话，就可以自由地在互联网上遨游了。当然，你可能会发现更好用的翻墙技术。
+至此，使用浏览器的话，就可以自由地在互联网上遨游了。当然，你会发现更好用的翻墙技术。
 
 ## 终端(terminal)翻墙##
 
