@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://debughacks.github.io/"/>
-  <updated>2016-11-17T06:46:43.000Z</updated>
+  <updated>2016-11-17T07:10:24.000Z</updated>
   <id>http://debughacks.github.io/</id>
   
   <author>
@@ -20,11 +20,11 @@
     <link href="http://debughacks.github.io/2016/11/17/mac-terminal-cross-gfw/"/>
     <id>http://debughacks.github.io/2016/11/17/mac-terminal-cross-gfw/</id>
     <published>2016-11-17T02:32:39.000Z</published>
-    <updated>2016-11-17T06:46:43.000Z</updated>
+    <updated>2016-11-17T07:10:24.000Z</updated>
     
     <content type="html"><![CDATA[<p>作为一个互联网从业人员，要想在天朝愉快地工作，生活，目前必须正视墙（gfw）的存在。<br>本文涉及的翻墙方法，主要针对mac系统。但大部分内容，同样适用于window和linux。也可以自行寻找相关替代品。<br><a id="more"></a></p>
 <h1 id="土豪的方法"><a href="#土豪的方法" class="headerlink" title="土豪的方法"></a>土豪的方法</h1><p>如果你是一个使用mac系统的土豪，那么，访问这个网站 <a href="http://nssurge.com/" target="_blank" rel="external">http://nssurge.com/</a> 就够了。</p>
-<h1 id="othres"><a href="#othres" class="headerlink" title="othres"></a>othres</h1><p>实际上，这才是本文的重点。</p>
+<h1 id="others"><a href="#others" class="headerlink" title="others"></a>others</h1><p>实际上，这才是本文的重点。</p>
 <h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><p>我们需要先搭建一个ss（Shadowsocks）服务器，或者买个账号（<a href="https://shadowsocks.com/）。" target="_blank" rel="external">https://shadowsocks.com/）。</a></p>
 <h3 id="搭建ss-server"><a href="#搭建ss-server" class="headerlink" title="搭建ss server"></a>搭建ss server</h3><ul>
 <li>买个海外的云主机，各大云的香港或者海外节点，应该都能满足需求。</li>
@@ -44,7 +44,7 @@
 <li>停止ss server<br><code>ssserver -c /etc/shadowsocks.json -d stop</code></li>
 </ul>
 <h3 id="安装ss-客户端"><a href="#安装ss-客户端" class="headerlink" title="安装ss 客户端"></a>安装ss 客户端</h3><p>推荐 <a href="https://github.com/shadowsocks/ShadowsocksX-NG" target="_blank" rel="external">ShadowsocksX-NG</a>，因为 <a href="https://github.com/shadowsocks/shadowsocks-iOS/releases" target="_blank" rel="external">ShadowsocksX</a>已无法正常更新pac文件。</p>
-<p>至此，使用浏览器的话，就可以自由地在互联网上遨游了。当然，你可能会发现更好用的翻墙技术。</p>
+<p>至此，使用浏览器的话，就可以自由地在互联网上遨游了。当然，你会发现更好用的翻墙技术。</p>
 <h2 id="终端-terminal-翻墙"><a href="#终端-terminal-翻墙" class="headerlink" title="终端(terminal)翻墙"></a>终端(terminal)翻墙</h2><h3 id="亲测可用的方案"><a href="#亲测可用的方案" class="headerlink" title="亲测可用的方案"></a>亲测可用的方案</h3><p>下载软件 <a href="https://www.proxifier.com/download.htm" target="_blank" rel="external">proxifier</a>，仅支持windows和mac，收费软件。</p>
 <p>如果是学生的话，可以给我留言，我共享个注册码给你。其他人建立购买，在这物价横飞的时代，几百块，分分钟就花没了。</p>
 <p>shadowsocks代理属于socks5代理，通俗的理解，socks5只是局部代理。使用Proxifier把shadowsocks代理转全局代理，类vpn。所以，该方案实际上不局限于终端翻墙。</p>
