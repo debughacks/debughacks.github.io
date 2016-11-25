@@ -5,7 +5,13 @@
   var s = document.getElementsByTagName("script")[0]; 
   s.parentNode.insertBefore(hm, s);
 })();
-</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">在Linux服务器之间同步用户账号</h1><span class="post-time">Aug 2, 2014</span><div id="sidebar" class="post-sidebar"><h3 class="heading">Contents</h3><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#同步步骤"><span class="toc-text">同步步骤</span></a></li></ol></div><div class="post-content"><p>最近负责运帷的同事离职了，原先由运帷可以一手搞定的事情，分摊到了几个研发同事的身上。但是多人公用一个账号，实在感觉不爽。<br><a id="more"></a><br>由于公司没有几台服务器上，所以可以逐一登录服务器创建新账号。但是对于一个码农而言，这不科学，它违背了<code>DRY</code>原则。</p>
+</script><script type="text/javascript">(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-87998743-1', 'auto');
+ga('send', 'pageview');</script></head><body><div id="main"><header><a href="/." class="logo">Debug Hacks</a><ul class="nav"><li class="nav-link"><a href="/" target="_self">Home</a></li><li class="nav-link"><a href="/archives/" target="_self">Archives</a></li><li class="nav-link"><a href="/tags/" target="_self">Tags</a></li><li class="nav-link"><a href="/about/" target="_self">About</a></li></ul></header><section id="container"><article class="post"><h1 class="post-title">在Linux服务器之间同步用户账号</h1><span class="post-time">Aug 2, 2014</span><div id="sidebar" class="post-sidebar"><h3 class="heading">Contents</h3><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#同步步骤"><span class="toc-text">同步步骤</span></a></li></ol></div><div class="post-content"><p>最近负责运帷的同事离职了，原先由运帷可以一手搞定的事情，分摊到了几个研发同事的身上。但是多人公用一个账号，实在感觉不爽。<br><a id="more"></a><br>由于公司没有几台服务器上，所以可以逐一登录服务器创建新账号。但是对于一个码农而言，这不科学，它违背了<code>DRY</code>原则。</p>
 <p>当然，也可以配置一个ldap服务器，修改linux用户登录使用ldap验证。但这让我有一种从火窟跳到冰窖的感觉。先不说是否能搞定配置的事情，引入的这个ldap，又会变成另外一个坑。</p>
 <p>昨天听一个同事时，我们来上班，要对得起自己的良心。所以我不能让上班时间在纠结中度过，用土方法解决问题先。</p>
 <h2 id="同步步骤"><a href="#同步步骤" class="headerlink" title="同步步骤"></a>同步步骤</h2><p>因为目前有一台服务器是登录的跳板机，所以只需要在跳板机上创建好新账号，然后把用户账号同步到其他机器上就好。</p>
